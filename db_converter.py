@@ -109,7 +109,6 @@ def parse(input_filename, output_filename):
 
                 # See if it needs type conversion
                 final_type = None
-                final_default = None
                 set_sequence = None
                 if type == "tinyint(1)":
                     type = "int4"
@@ -171,26 +170,27 @@ def parse(input_filename, output_filename):
                     type = enum_name
 
                 if final_type:
-                    cast_lines.append("ALTER TABLE \"%s\" ALTER COLUMN \"%s\" DROP DEFAULT" % (current_table, name))
-                    cast_lines.append("ALTER TABLE \"%s\" ALTER COLUMN \"%s\" TYPE %s USING CAST(\"%s\" as %s)" % (current_table, name, final_type, name, final_type))
-                    if final_default:
-                        cast_lines.append("ALTER TABLE \"%s\" ALTER COLUMN \"%s\" SET DEFAULT %s" % (current_table, name, final_default))
+                    cast_lines.append("ALTER TABLE \"%s\" ALTER COLUMN %s DROP DEFAULT, ALTER COLUMN %s TYPE %s USING CAST(%s as %s)" % (current_table, name, name, final_type, name, final_type))
                 # ID fields need sequences [if they are integers?]
                 if name == "id" and set_sequence is True:
                     sequence_lines.append("CREATE SEQUENCE %s_id_seq" % (current_table))
                     sequence_lines.append("SELECT setval('%s_id_seq', max(id)) FROM %s" % (current_table, current_table))
-                    sequence_lines.append("ALTER TABLE \"%s\" ALTER COLUMN \"id\" SET DEFAULT nextval('%s_id_seq')" % (current_table, current_table))
+                    sequence_lines.append("ALTER TABLE \"%s\" ALTER COLUMN id SET DEFAULT nextval('%s_id_seq')" % (current_table, current_table))
                 # Record it
-                creation_lines.append('"%s" %s %s' % (name, type, extra))
-                tables[current_table]['columns'].append((name, type, extra))
+                if name == "USER" or name == "TIME":
+                    creation_lines.append('"%s" %s %s' % (name, type, extra))
+                    tables[current_table]['columns'].append((name, type, extra))
+                else:
+                    creation_lines.append('%s %s %s' % (name, type, extra))
+                    tables[current_table]['columns'].append((name, type, extra))
             # Is it a constraint or something?
             elif line.startswith("PRIMARY KEY"):
-                creation_lines.append(line.rstrip(","))
+                creation_lines.append(re.sub('"','',line.rstrip(",")))
             elif line.startswith("CONSTRAINT"):
                 foreign_key_lines.append("ALTER TABLE \"%s\" ADD CONSTRAINT %s DEFERRABLE INITIALLY DEFERRED" % (current_table, line.split("CONSTRAINT")[1].strip().rstrip(",")))
                 foreign_key_lines.append("CREATE INDEX ON \"%s\" %s" % (current_table, line.split("FOREIGN KEY")[1].split("REFERENCES")[0].strip().rstrip(",")))
             elif line.startswith("UNIQUE KEY"):
-                creation_lines.append("UNIQUE (%s)" % line.split("(")[1].split(")")[0])
+                creation_lines.append("UNIQUE (%s)" % re.sub('"','',line.split("(")[1].split(")")[0]))
             elif line.startswith("FULLTEXT KEY"):
 
                 fulltext_keys = " || ' ' || ".join( line.split('(')[-1].split(')')[0].replace('"', '').split(',') )
