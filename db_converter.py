@@ -83,8 +83,9 @@ def parse(input_filename, output_filename):
                 creation_lines = []
             # Inserting data into a table?
             elif line.startswith("INSERT INTO"):
-                if current_table in [ 'JQUARTZ_FIRED_TRIGGERS', 'JQUARTZ_JOB_DETAILS', 'JQUARTZ_TRIGGERS', 'OS_CURRENTSTEP', 'OS_CURRENTSTEP_PREV', 'OS_HISTORYSTEP', 'OS_HISTORYSTEP_PREV' ]:
-                    output.write(re.sub('"','',line.split('VALUES')[0]) + " " + line.split('VALUES')[1].encode("utf8").replace("'0000-00-00 00:00:00'", "NULL") + "\n")
+                current_insert = line.split('"')[1]
+                if current_insert in [ 'JQUARTZ_FIRED_TRIGGERS', 'JQUARTZ_JOB_DETAILS', 'JQUARTZ_TRIGGERS', 'OS_CURRENTSTEP', 'OS_CURRENTSTEP_PREV', 'OS_HISTORYSTEP', 'OS_HISTORYSTEP_PREV' ]:
+                    output.write(re.sub('"','',line.split('VALUES')[0]) + line.split('VALUES')[1].encode("utf8").replace("'0000-00-00 00:00:00'", "NULL") + "\n")
                 else:
                     output.write(line.encode("utf8").replace("'0000-00-00 00:00:00'", "NULL") + "\n")
                 num_inserts += 1
