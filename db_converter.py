@@ -177,7 +177,7 @@ def parse(input_filename, output_filename):
                     sequence_lines.append("SELECT setval('%s_id_seq', max(id)) FROM %s" % (current_table, current_table))
                     sequence_lines.append("ALTER TABLE \"%s\" ALTER COLUMN id SET DEFAULT nextval('%s_id_seq')" % (current_table, current_table))
                 # Record it
-                if name == "USER" or name == "TIME":
+                if name in [ "USER", "TIME" ]:
                     creation_lines.append('"%s" %s %s' % (name, type, extra))
                     tables[current_table]['columns'].append((name, type, extra))
                 else:
@@ -200,7 +200,10 @@ def parse(input_filename, output_filename):
                 pass
             # Is it the end of the table?
             elif line == ");":
-                output.write("CREATE TABLE \"%s\" (\n" % current_table)
+                if current_table in [ 'JQUARTZ_FIRED_TRIGGERS', 'JQUARTZ_JOB_DETAILS', 'JQUARTZ_TRIGGERS', 'OS_CURRENTSTEP', 'OS_CURRENTSTEP_PREV', 'OS_HISTORYSTEP', 'OS_HISTORYSTEP_PREV' ]:
+                    output.write("CREATE TABLE %s (\n" % current_table)
+                else:
+                    output.write("CREATE TABLE \"%s\" (\n" % current_table)
                 for i, line in enumerate(creation_lines):
                     output.write("    %s%s\n" % (line, "," if i != (len(creation_lines) - 1) else ""))
                 output.write(');\n\n')
